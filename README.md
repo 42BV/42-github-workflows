@@ -13,7 +13,7 @@ on:
 # Trigger the workflows from this repo
 jobs:
   call-workflow:
-    uses: TimQuist/42-github-workflows/.github/workflows/maven-test.yml
+    uses: 42BV/42-github-workflows/.github/workflows/maven-test.yml
     with:
       java-version: 11
 ```
