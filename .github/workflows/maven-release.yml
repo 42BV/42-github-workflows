@@ -2,6 +2,26 @@ name: Publish package to the Maven Central Repository
 
 on:
   workflow_call:
+    secrets: 
+      gpg-private-key:
+        description: The GPG Private Key used to sign the resources.
+        required: true
+      gpg-passphrase:
+        description: GPG Passphrase
+        required: true
+      maven-user:
+        description: Maven Central User
+        required: true
+      maven-token:
+        description: Maven Central Token
+        required: true
+      git-email:
+        description: Git email
+        required: true
+      git-name:
+        description: Git name
+        required: true
+    
     inputs:
       release-version:
         required: true
@@ -11,7 +31,6 @@ on:
         required: true
         description: The upcoming development version.
         type: string
-
 
 jobs:
   publish:
@@ -26,22 +45,22 @@ jobs:
           server-id: central
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
-          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-private-key: ${{ secrets.gpg-private-key }}
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
       - name: Set version
         run: mvn versions:set -DnewVersion=${{ github.event.inputs.release-version }}
       - name: Publish package
         run: mvn --batch-mode deploy -DskipTests -DdryRun=true
         env:
-          MAVEN_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
-          MAVEN_PASSWORD: ${{ secrets.SONATYPE_KEY }}
-          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          MAVEN_USERNAME: ${{ secrets.maven-user }}
+          MAVEN_PASSWORD: ${{ secrets.maven-token }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.gpg-passphrase }}
       - name: Set new version
         run: mvn versions:set -DnewVersion=${{ github.event.inputs.next-version }}
       - name: Set git-email
-        run: git config user.email ${{ secrets.GIT_USER_EMAIL }}
+        run: git config user.email ${{ secrets.git-email }}
       - name: Set git-name
-        run: git config user.name ${{ secrets.GIT_USER_NAME }}
+        run: git config user.name ${{ secrets.git-name }}
       - name: Git Add
         run: git add .
       - name: Git Commit
