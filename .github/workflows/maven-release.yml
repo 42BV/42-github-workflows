@@ -53,7 +53,7 @@ jobs:
         id: version
       - name: Create Tag
         run: |
-          git tag -a "v${{ steps.version.outputs.version }}" -m "Release Version ${{ steps.version.outputs.version }}"
+          git tag -a "${{ steps.version.outputs.version }}" -m "Release Version ${{ steps.version.outputs.version }}"
           git push origin ${{ steps.version.outputs.version }}
       - name: Set new version
         if: ${{ github.event.inputs.next-version }} # Only run this step when a development-version is specified.
