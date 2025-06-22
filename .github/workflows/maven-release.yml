@@ -46,12 +46,11 @@ jobs:
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
       - name: Retrieve version
         run: |
-          VERSION=$( mvn help:evaluate -Dexpression=project.version -q -DforceStdout )
-          echo "version=${{ VERSION }}" >> $GITHUB_OUTPUT
+          echo "version=$( mvn help:evaluate -Dexpression=project.version -q -DforceStdout )" >> $GITHUB_OUTPUT
         id: version
       - name: Create Tag
         run: |
-          git tag -a ${{ steps.version.outputs.verison }} -m "Release Version ${{ steps.version.outputs.version }}"
+          git tag -a ${{ steps.version.outputs.version }} -m "Release Version ${{ steps.version.outputs.version }}"
           git push origin ${{ steps.version.outputs.version }}
       - name: Set new version
         if: ${{ github.event.inputs.next-version }} # Only run this step when a development-version is specified.
