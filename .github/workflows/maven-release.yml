@@ -44,10 +44,15 @@ jobs:
           MAVEN_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.SONATYPE_KEY }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      - name: Retrieve version
+        run: |
+          VERSION=$( mvn help:evaluate -Dexpression=project.version -q -DforceStdout )
+          echo "::set-output name=version::$VERSION"
+        id: version
       - name: Create Tag
         run: |
-          git tag -a $(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
-          git push origin $(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          git tag -a ${{ steps.version.outputs.version }}
+          git push origin ${{ steps.version.outputs.version }}
       - name: Set new version
         if: ${{ github.event.inputs.next-version }} # Only run this step when a development-version is specified.
         run: mvn versions:set -DnewVersion=${{ github.event.inputs.next-version }}
