@@ -4,12 +4,16 @@ on:
   workflow_call:
     inputs:
       release-version:
-        required: true
+        required: false
         description: The version of the current release.
         type: string
       next-version:
-        required: true
+        required: false
         description: The upcoming development version.
+        type: string
+      java-version:
+        required: true
+        description: The Java-version to use for the deployment-process.
         type: string
 
 jobs:
@@ -20,30 +24,31 @@ jobs:
       - name: Set up Maven Central Repository
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
+          java-version: ${{ github.event.inputs.java-version }}
           distribution: 'temurin'
           server-id: central
           server-username: MAVEN_USERNAME
           server-password: MAVEN_PASSWORD
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
           gpg-passphrase: MAVEN_GPG_PASSPHRASE
+      - name: Set git-user # This step sets the git-user associated with the upcoming commits.
+        run: |
+          git config user.email ${{ secrets.GIT_USER_EMAIL }}
+          git config user.name ${{ secrets.GIT_USER_NAME }}
       - name: Set version
+        if: ${{ github.event.inputs.release-version }} # Only run this step when a release-version is specified.
         run: mvn versions:set -DnewVersion=${{ github.event.inputs.release-version }}
       - name: Publish package
-        run: mvn --batch-mode deploy -DskipTests -DdryRun=true
+        run: mvn --batch-mode deploy -DskipTests
         env:
           MAVEN_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.SONATYPE_KEY }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
       - name: Set new version
+        if: ${{ github.event.inputs.next-version }} # Only run this step when a development-version is specified.
         run: mvn versions:set -DnewVersion=${{ github.event.inputs.next-version }}
-      - name: Set git-email
-        run: git config user.email ${{ secrets.GIT_USER_EMAIL }}
-      - name: Set git-name
-        run: git config user.name ${{ secrets.GIT_USER_NAME }}
-      - name: Git Add
-        run: git add .
-      - name: Git Commit
-        run: git commit -m "Release version"
-      - name: Push changes
-        run: git push
+      - name: Push release commits
+        run: |
+          git add .
+          git commit -m "Release version"
+          git push
