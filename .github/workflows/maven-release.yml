@@ -44,6 +44,9 @@ jobs:
           MAVEN_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.SONATYPE_KEY }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      - name: Remove Snapshot
+        if: ${{ !github.event.inputs.release-version }}
+        run: mvn versions:set -DremoveSnapshot
       - name: Retrieve version
         run: |
           echo "version=$( mvn help:evaluate -Dexpression=project.version -q -DforceStdout )" >> $GITHUB_OUTPUT
@@ -55,6 +58,9 @@ jobs:
       - name: Set new version
         if: ${{ github.event.inputs.next-version }} # Only run this step when a development-version is specified.
         run: mvn versions:set -DnewVersion=${{ github.event.inputs.next-version }}
+      - name: Set snapshot
+        if: ${{ !github.event.inputs.next-version }}
+        run: mvn versions:set -DnextSnapshot
       - name: Push release commits
         run: |
           git add .
