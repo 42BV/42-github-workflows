@@ -26,6 +26,11 @@ jobs:
         with:
           java-version: ${{ github.event.inputs.java-version }}
           distribution: 'temurin'
+          server-id: central
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
       - name: Set git-user # This step sets the git-user associated with the upcoming commits.
         run: |
           git config user.email ${{ secrets.GIT_USER_EMAIL }}
@@ -40,11 +45,9 @@ jobs:
           MAVEN_PASSWORD: ${{ secrets.SONATYPE_KEY }}
           MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
       - name: Create Tag
-        with:
-          project-version: $(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
         run: |
-          git tag -a ${{ project-version }}
-          git push origin ${{ project-version }}
+          git tag -a $(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
+          git push origin $(mvn help:evaluate -Dexpression=project.version -q -DforceStdout)
       - name: Set new version
         if: ${{ github.event.inputs.next-version }} # Only run this step when a development-version is specified.
         run: mvn versions:set -DnewVersion=${{ github.event.inputs.next-version }}
