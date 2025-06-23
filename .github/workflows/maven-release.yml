@@ -1,0 +1,68 @@
+name: Publish package to the Maven Central Repository
+
+on:
+  workflow_call:
+    inputs:
+      release-version:
+        required: false
+        description: The version of the current release.
+        type: string
+      next-version:
+        required: false
+        description: The upcoming development version.
+        type: string
+      java-version:
+        required: true
+        description: The Java-version to use for the deployment-process.
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Maven Central Repository
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ github.event.inputs.java-version }}
+          distribution: 'temurin'
+          server-id: central
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+      - name: Set git-user # This step sets the git-user associated with the upcoming commits.
+        run: |
+          git config user.email "${{github.actor_id}}+${{github.actor}}@users.noreply.github.com"
+          git config user.name ${{github.actor}}
+      - name: Set version
+        if: ${{ github.event.inputs.release-version }} # Only run this step when a release-version is specified.
+        run: mvn versions:set -DnewVersion=${{ github.event.inputs.release-version }}
+      - name: Publish package
+        run: mvn --batch-mode deploy -Dmaven.test.skip=true
+        env:
+          MAVEN_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.SONATYPE_KEY }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+      - name: Remove Snapshot
+        if: ${{ !github.event.inputs.release-version }}
+        run: mvn versions:set -DremoveSnapshot
+      - name: Retrieve version
+        run: |
+          echo "version=$( mvn help:evaluate -Dexpression=project.version -q -DforceStdout )" >> $GITHUB_OUTPUT
+        id: version
+      - name: Create Tag
+        run: |
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Release Version ${{ steps.version.outputs.version }}"
+          git push origin "v${{ steps.version.outputs.version }}"
+      - name: Set new version
+        if: ${{ github.event.inputs.next-version }} # Only run this step when a development-version is specified.
+        run: mvn versions:set -DnewVersion=${{ github.event.inputs.next-version }}
+      - name: Set snapshot
+        if: ${{ !github.event.inputs.next-version }}
+        run: mvn versions:set -DnextSnapshot
+      - name: Push release commits
+        run: |
+          git add .
+          git commit -m "Release version"
+          git push
