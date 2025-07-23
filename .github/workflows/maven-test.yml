@@ -29,7 +29,7 @@ jobs:
           java-version: ${{ inputs.java-version }}
           distribution: 'adopt'
       - name: OWASP Dependency Checks
-        run: mvn org.owasp:dependency-check-maven:check
+        run: mvn org.owasp:dependency-check-maven:check -DnvdApiKey=${{ secrets.OWASP_42_ACTIONS }}
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots package
       - name: Code coverage with Codecov
