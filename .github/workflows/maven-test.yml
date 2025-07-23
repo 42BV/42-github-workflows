@@ -30,11 +30,16 @@ jobs:
         with:
           java-version: ${{ inputs.java-version }}
           distribution: 'adopt'
-      - name: OWASP dependency checks
+      - name: OWASP Dependency Checks
         env:
-          # Use the secret that was passed in from the caller
           API_KEY: ${{ secrets.OWASP_42_ACTIONS }}
-        run: mvn dependency-check:check -DnvdApiKey="$API_KEY"
+        run: |
+          # Securely debug the key's presence by checking its length
+          echo "API Key length is: ${#API_KEY}"
+          
+          # Original commands
+          mvn org.owasp:dependency-check-maven:purge --batch-mode || true
+          mvn org.owasp:dependency-check-maven:check --batch-mode -DnvdApiKey="$API_KEY"
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots package
       - name: Code coverage with Codecov
