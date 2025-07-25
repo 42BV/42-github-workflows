@@ -30,8 +30,8 @@ jobs:
           distribution: 'adopt'
       - name: OWASP Dependency Checks
         env:
-          NVD_API_KEY: ${{ secrets.OWASP_42_ACTIONS }}
-        run: mvn org.owasp:dependency-check-maven:check -DnvdApiKey="$NVD_API_KEY"
+          API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: mvn org.owasp:dependency-check-maven:check -DnvdApiKey="$API_KEY"
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots package
       - name: Code coverage with Codecov
