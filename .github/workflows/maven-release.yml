@@ -42,7 +42,7 @@ jobs:
         if: ${{ !github.event.inputs.release-version }}
         run: mvn versions:set -DremoveSnapshot
       - name: Publish package
-        run: mvn --batch-mode deploy -Dmaven.test.skip=true
+        run: mvn --batch-mode deploy -Dmaven.test.skip=true -P release
         env:
           MAVEN_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
           MAVEN_PASSWORD: ${{ secrets.SONATYPE_KEY }}
