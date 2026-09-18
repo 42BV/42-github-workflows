@@ -17,24 +17,72 @@ jobs:
     steps:
       - name: Repository checkout
         uses: actions/checkout@v4
-      - name: Cache local Maven repository
-        uses: actions/cache@v4
+
+      # The Maven repository is restored and saved in separate steps (instead of a single actions/cache step) so the
+      # cache is also saved when a step fails. actions/cache only saves on job success, which meant that a failing
+      # OWASP dependency check (the first Maven step) left nothing in the cache and the next run had to download the
+      # full Maven repository and NVD data again.
+      #
+      # The OWASP NVD data lives inside ~/.m2/repository (org/owasp/dependency-check-data) but changes daily, whereas
+      # the downloaded artifacts only change with the pom. They are cached separately so that the daily NVD delta does
+      # not force a re-upload of the full Maven repository, and a pom change does not throw away the NVD data.
+      - name: Restore Maven repository cache
+        id: maven-cache
+        uses: actions/cache/restore@v4
         with:
-          path: ~/.m2/repository
+          path: |
+            ~/.m2/repository
+            !~/.m2/repository/org/owasp/dependency-check-data
           key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-          restore-keys: ${{ runner.os }}-maven-
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Determine cache date
+        id: date
+        run: echo "today=$(date -u +%Y-%m-%d)" >> "$GITHUB_OUTPUT"
+
+      - name: Restore OWASP dependency-check data cache
+        id: owasp-cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: ${{ runner.os }}-owasp-nvd-${{ steps.date.outputs.today }}
+          restore-keys: |
+            ${{ runner.os }}-owasp-nvd-
+
       - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           java-version: ${{ inputs.java-version }}
           distribution: 'adopt'
+
       - name: OWASP Dependency Checks
         env:
           API_KEY: ${{ secrets.NVD_API_KEY }}
         run: mvn --batch-mode org.owasp:dependency-check-maven:check -DnvdApiKey="$API_KEY" -DnvdDatafeedUrl=https://dependency-check.github.io/DependencyCheck_Builder/nvd_cache/
+
       - name: Build with Maven
         run: mvn --batch-mode --update-snapshots package
+
       - name: Code coverage with Codecov
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
+
+      # Save both caches even when a previous step failed, so a red build still leaves a warm cache for the next run.
+      # Cache entries are immutable, so saving is skipped when the exact key was already restored.
+      - name: Save OWASP dependency-check data cache
+        if: always() && steps.owasp-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: ${{ runner.os }}-owasp-nvd-${{ steps.date.outputs.today }}
+
+      - name: Save Maven repository cache
+        if: always() && steps.maven-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ~/.m2/repository
+            !~/.m2/repository/org/owasp/dependency-check-data
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
