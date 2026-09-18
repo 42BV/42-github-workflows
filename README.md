@@ -13,9 +13,10 @@ on:
 # Trigger the workflows from this repo
 jobs:
   call-workflow:
-    uses: 42BV/42-github-workflows/.github/workflows/maven-test.yml
+    uses: 42BV/42-github-workflows/.github/workflows/maven-test.yml@main
     with:
-      java-version: 11
+      java-version: 21
+    secrets: inherit
 ```
 
 **Example usage release-workflow**
@@ -45,7 +46,7 @@ on:
 
 jobs:
   call-workflow:
-  uses: 42BV/42-github-workflows/.github/workflows/maven-release.yml@master
+  uses: 42BV/42-github-workflows/.github/workflows/maven-release.yml@main
   secrets: inherit # You may want to specify the exact secrets to use. This will work, though.
   with:
     # Passes the values to the template. The workflow is capable of handling empty values.
